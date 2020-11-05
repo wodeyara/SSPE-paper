@@ -85,7 +85,7 @@ for seg = 2:numSegments
     x = stateVec(:,end);
     P = squeeze(stateCov(:,:,end));
     
-    for i = 1:(length(y_thisRun)-1)
+    for i = 1:(length(y_thisRun))
         % kalman update
         [x_new,P_new] = oneStepKFupdate_sspp(x,y_thisRun(i),phi,M,Q,R,P);
         allX(:,i) = x_new;
@@ -109,18 +109,18 @@ for seg = 2:numSegments
         x = x_new;
     end
     % ending it on N-1
-    [x_new,P_new] = oneStepKFupdate_sspp(x,y_thisRun(i),phi,M,Q,R,P);
-    allX(:,i+1) = x_new;
-    allP(:,:,i+1) = P_new;
-    
-    % estimate phase
-    phase(seg, i) = angle(x_new(lowFreqLoc*2-1) + 1i* x_new(lowFreqLoc*2));
-    samples = mvnrnd(x_new(lowFreqLoc*2-1:lowFreqLoc*2), P_new(lowFreqLoc*2-1:lowFreqLoc*2,lowFreqLoc*2-1:lowFreqLoc*2),2000);
-    sampleAngles = angle(exp(1i*angle(samples(:,1) + 1i*samples(:,2)) - 1i*phase(seg,i)));
-    tmpAngleStd = (wrapTo2Pi((prctile(sampleAngles,97.5) - prctile(sampleAngles,2.5)))/2);
-    phaseBounds(seg,i,:) = sort([(phase(seg,i)- tmpAngleStd), (phase(seg,i) + tmpAngleStd)]);
-    circstd(seg,i) = ang_var2dev(abs(mean(exp(1i*sampleAngles))));%exp(1i*sampleAngles)
-    cosineSum(seg,i) = mean(cos(2*(sampleAngles)));
+%     [x_new,P_new] = oneStepKFupdate_sspp(x,y_thisRun(i),phi,M,Q,R,P);
+%     allX(:,i+1) = x_new;
+%     allP(:,:,i+1) = P_new;
+%     
+%     % estimate phase
+%     phase(seg, i) = angle(x_new(lowFreqLoc*2-1) + 1i* x_new(lowFreqLoc*2));
+%     samples = mvnrnd(x_new(lowFreqLoc*2-1:lowFreqLoc*2), P_new(lowFreqLoc*2-1:lowFreqLoc*2,lowFreqLoc*2-1:lowFreqLoc*2),2000);
+%     sampleAngles = angle(exp(1i*angle(samples(:,1) + 1i*samples(:,2)) - 1i*phase(seg,i)));
+%     tmpAngleStd = (wrapTo2Pi((prctile(sampleAngles,97.5) - prctile(sampleAngles,2.5)))/2);
+%     phaseBounds(seg,i,:) = sort([(phase(seg,i)- tmpAngleStd), (phase(seg,i) + tmpAngleStd)]);
+%     circstd(seg,i) = ang_var2dev(abs(mean(exp(1i*sampleAngles))));%exp(1i*sampleAngles)
+%     cosineSum(seg,i) = mean(cos(2*(sampleAngles)));
     
 
     allX_full(seg,:,:) = allX(lowFreqLoc*2-1:lowFreqLoc*2,:)';

@@ -42,7 +42,7 @@ errorVal = Inf;
 
 while iter < 400 && errorVal(iter)>1e-3
 %% run forward KF
-for i = 1:(length(y)-1)
+for i = 1:(length(y))
     
     [x_new,P_new] = oneStepKFupdate_sspp(x,y(i),phi,M,Q,R,P);
     allX(:,i) = x_new;
@@ -51,10 +51,6 @@ for i = 1:(length(y)-1)
     P = P_new;
     x = x_new;
 end
-% ending it on N-1
-[x_new,P_new] = oneStepKFupdate_sspp(x,y(i),phi,M,Q,R,P);
-allX(:,i+1) = x_new;
-allP(:,:,i+1) = P_new;
 
 % now we have P_new as P_N_N and P as P_(N-1)_(N-1)
 % same for x

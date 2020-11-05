@@ -8,11 +8,23 @@ function conf = angle_conf_MC(mu,Sigma,prob,seeds)
     [tmp,I] = sort(abs(phases));
     phases = sort(phases(I(1:ceil(prob*nmc))));
     conf = [phi+phases(1) phi+phases(length(phases))];
-    if conf(1)<-pi
-        conf(1) = conf(1)+2*pi;
+    
+    if conf(2)-conf(1) > pi
+       tmp = 2*pi - (conf(2) - conf(1));
+       conf(2) = phi + tmp/2;
+       conf(1) = phi- tmp/2;
     end
-    if conf(2)>pi
-        conf(2) = conf(2)-2*pi;
-    end
+%     if conf(1)<-pi
+%         conf(1) = conf(1)+2*pi;
+%     end
+%     if conf(2)>pi
+%         conf(2) = conf(2)-2*pi;
+%     end
+%     
+%     if conf(2)<conf(1)
+%         t =conf(2);
+%         conf(2) = conf(1);
+%         conf(1) = t;
+%     end
 end
 
