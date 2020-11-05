@@ -12,7 +12,10 @@ function [omega, ampEst, allQ, R,stateVec, stateCov] = fit_MKModel_multSines(dat
 % Fs - sampling frequency
 % sigmaFreqs - what are variances at each of the frequencies specified
 % sibmaObs - what is the expected observation noise variance?
-% Last edit: Ani Wodeyar 3/17/2020
+% Ani Wodeyar 3/17/2020
+% have now fixed the indexing of the fixed interval smoother, was off by 1
+% before
+% Ani Wodeyar 9/23/2020
 
 if isempty(sigmaFreqs)
     sigmaFreqs = 0.1*ones(length(freqs),1);
@@ -71,10 +74,15 @@ for i = length(y)-1:-1:1
     x = allX(:,i);
     P = squeeze(allP(:,:,i));    
     
-    newAllX(:,i) = x_backone;
-    newAllP(:,:,i) = P_backone;
-    allJ(:,:,i) = J_one;
+    newAllX(:,i+1) = x_backone;
+    newAllP(:,:,i+1) = P_backone;
+    allJ(:,:,i+1) = J_one;
 end
+[x_backone,P_backone, J_one] =  fixedIntervalSmoother_sspp(x, x_n, P, P_n, phi, Q);
+newAllX(:,1) = x_backone;
+newAllP(:,:,1) = P_backone;
+allJ(:,:,1) = J_one;
+
 % need to estimate P_t_(t-1) for t = 1:N
 P_tmp = phi * squeeze(allP(:,:,end-1)) * phi' +Q;
 K = P_tmp * M * (1/(M' * P_tmp*M + R));
@@ -86,7 +94,7 @@ for i = length(y)-1:-1:2
    allP_N_N1(:,:,i)=squeeze(allP(:,:,i)) * squeeze(allJ(:,:,i-1))' + ...
                     squeeze(allJ(:,:,i))*(squeeze(allP_N_N1(:,:,i+1)) - phi * squeeze(allP(:,:,i))) * squeeze(allJ(:,:,i-1))';
 end
-
+allP_N_N1(:,:,1) = eye(size(squeeze(allP(:,:,1))));
 
 %% update the parameter estimate from optimizing exp cond likelihood
 % the portion here is a direct lift from shumway and stoffer rather than
@@ -119,20 +127,19 @@ for numFreqs = 1: length(freqs)
     A_tmp = A((numFreqs-1)*2 + 1: numFreqs*2,(numFreqs-1)*2 + 1: numFreqs*2);
     C_tmp = C((numFreqs-1)*2 + 1: numFreqs*2,(numFreqs-1)*2 + 1: numFreqs*2);
     freqEst(numFreqs) = (atan((B_tmp(2,1) - B_tmp(1,2))/trace(B_tmp)));
-    ampEst(numFreqs) = sqrt((B_tmp(2,1) - B_tmp(1,2))^2 + trace(B_tmp)^2)/trace(A_tmp);
+    ampEst(numFreqs) = min(sqrt((B_tmp(2,1) - B_tmp(1,2))^2 + trace(B_tmp)^2)/trace(A_tmp),1-eps); % constrained to 1
     allQ(numFreqs) = 1/(2*length(y)) * (trace(C_tmp) - ampEst(numFreqs).^2 * trace(A_tmp));
 end
     
 [phi, Q] = genParametersSoulatMdl_sspp(freqEst * 1000 /(2*pi), Fs, ampEst, allQ); 
 
-% disp('Frequency is:')
-% freqEst * 1000 /(2*pi)
 omega = freqEst * 1000 /(2*pi);
 stateVec = newAllX;
 stateCov = newAllP;
-% phase = angle(newAllX(1,:) + 1i * newAllX(2,:));
-% disp('Error in phase (in ms)')
-% (mean((abs(phase - realPhase))/(2*pi) * (1/6) *1000))
+
+xstart = newAllX(:,1);
+Pstart = squeeze(newAllP(:,:,1));
+
 iter = iter + 1;
 errorVal(iter) =sum(abs(omega - oldFreq));
 end
