@@ -28,9 +28,6 @@ y = data;
 freqEst = freqs/Fs;
 % need to initialize all my parameters
 
-xstart = zeros(2*length(freqs),1);
-Pstart = .001 * eye(2*length(freqs));
-
 [phi, Q, M] = genParametersSoulatMdl_sspp(freqs, Fs, ampVec, sigmaFreqs); 
 R = sigmaObs;
 
@@ -39,9 +36,12 @@ errorVal = Inf;
 %iterate though maximizing likelihood
 
 while iter < 400 && errorVal(iter)>1e-3
-    
+
+xstart = zeros(2*length(freqs),1);
+Pstart = .001 * eye(2*length(freqs));
 x = xstart;
 P = Pstart;
+
 %% run forward KF
 for i = 1:(length(y))
     
@@ -134,8 +134,8 @@ omega = freqEst * 1000 /(2*pi);
 stateVec = newAllX;
 stateCov = newAllP;
 
-xstart = newAllX(:,1);
-Pstart = squeeze(newAllP(:,:,1));
+% xstart = newAllX(:,1);
+% Pstart = squeeze(newAllP(:,:,1));
 
 iter = iter + 1;
 errorVal(iter) =sum(abs(omega - oldFreq));
