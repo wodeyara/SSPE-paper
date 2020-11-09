@@ -30,8 +30,6 @@ freqEst = freqs/Fs;
 
 xstart = zeros(2*length(freqs),1);
 Pstart = .001 * eye(2*length(freqs));
-x = xstart;
-P = Pstart;
 
 [phi, Q, M] = genParametersSoulatMdl_sspp(freqs, Fs, ampVec, sigmaFreqs); 
 R = sigmaObs;
@@ -41,6 +39,9 @@ errorVal = Inf;
 %iterate though maximizing likelihood
 
 while iter < 400 && errorVal(iter)>1e-3
+    
+x = xstart;
+P = Pstart;
 %% run forward KF
 for i = 1:(length(y))
     
