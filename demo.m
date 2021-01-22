@@ -5,25 +5,25 @@
 
 Fs = 1000;
 time = 10; 
-Vlo = (10+ 1*randn(1,(time*Fs))).*cos(2*pi*(6).*[1/Fs:1/Fs:time]); % random movement in amplitude, creates a little bump in PSD
+Vlo = (10).*cos(2*pi*(6).*[1/Fs:1/Fs:time]); % random movement in amplitude, creates a little bump in PSD
 
 [pn] = make_pink_noise(1,1e4,1/Fs);
 pn = 10*pn;
-data = Vlo +pn;
+data = Vlo;
 truePhase =  wrapToPi((2*pi*(6).*[1/Fs:1/Fs:time]))';
 
 %%
 
 % following helps to initialize more reasonable estimates for the scaling
 % parameter 'a' and the variances for the state vector
-[init_f, init_a,init_sigma,R0] = initializeParams(data,1,1,2000); % s
+% [init_f, init_a,init_sigma,R0] = initializeParams(data,1,1,2000); % s
 
 % setting up initial parameters to start the causalPhaseEM code
 initParams.freqs = 4; % initialization using above not great at identifying starting freq
 initParams.Fs = 1000;
-initParams.ampVec = init_a; % in a pinch this can be initialized to 0.99 to start
-initParams.sigmaFreqs = init_sigma; % its important to use a value of this that is in the same ballpark scale
-initParams.sigmaObs = R0;
+initParams.ampVec = .99; % in a pinch this can be initialized to 0.99 to start
+initParams.sigmaFreqs = 10; % its important to use a value of this that is in the same ballpark scale
+initParams.sigmaObs = 1;
 initParams.window = 2000;
 initParams.lowFreqBand = [4,8];
 
