@@ -28,7 +28,7 @@
 % 3 Kalman filter with the latest parameter estiamtes
 % Last edit: Ani Wodeyar 10/19/2020
 
-function [phase,phaseBounds,allX_full,circstd,cosineSum] = causalPhaseEM_MKmdl(y,initParams)
+function [phase,phaseBounds,allX_full,phaseWidth,returnParams] = causalPhaseEM_MKmdl(y,initParams)
 
 freqs = initParams.freqs;
 Fs = initParams.Fs;
@@ -55,6 +55,11 @@ data = y(1:windowSize);
 % first run to set up parameters
 [omega, ampEst, allQ, R, stateVec, stateCov] = fit_MKModel_multSines(data,freqs, Fs,ampVec, sigmaFreqs,sigmaObs);
 lowFreqLoc = find((omega>lowFreqBand(1)) & (omega<lowFreqBand(2)),1);
+returnParams.freqs = omega;
+returnParams.ampVec = ampEst;
+returnParams.sigmaFreqs = allQ;
+returnParams.sigmaObs = R;
+
  
 if isempty(lowFreqLoc)
     disp('Low freq band limits incorrect OR there is no low freq signal; retaining initial params')
@@ -71,8 +76,7 @@ end
 phase = zeros(numSegments, windowSize);
 phaseBounds = zeros(numSegments, windowSize,2);
 allX_full = zeros(numSegments, windowSize, 2);
-circstd = zeros(numSegments,windowSize);
-cosineSum = zeros(numSegments,windowSize);
+phaseWidth = zeros(numSegments,windowSize);
 
 for seg = 2:numSegments
 %     tic
@@ -96,50 +100,21 @@ for seg = 2:numSegments
         phase(seg, i) = angle(x_new(lowFreqLoc*2-1) + 1i* x_new(lowFreqLoc*2));
         samples = mvnrnd(x_new(lowFreqLoc*2-1:lowFreqLoc*2),...
             P_new(lowFreqLoc*2-1:lowFreqLoc*2,lowFreqLoc*2-1:lowFreqLoc*2),2000);
-        % akin to what is done under Technique 2 on page 206 of FIsher 1993
-        % statistical analysis of circular data
+        
         sampleAngles = (angle(exp(1i*angle(samples(:,1) + 1i*samples(:,2)) - 1i*phase(seg,i)))); % removing mean
-        tmpAngleStd = (wrapTo2Pi((prctile(sampleAngles,97.5) - prctile(sampleAngles,2.5)))/2); %[0,pi/2]
-        phaseBounds(seg,i,:) = sort([(phase(seg,i)- tmpAngleStd), (phase(seg,i) + tmpAngleStd)]); % can have a range of [0,pi]
-        circstd(seg,i) = ang_var2dev(abs(mean(exp(1i*sampleAngles))));
-        cosineSum(seg,i) = mean(cos(2*(sampleAngles)));
+        lowerBnd = (prctile(sampleAngles,2.5));
+        upperBnd = (prctile(sampleAngles,97.5));
+        phaseBounds(seg,i,:) = sort([lowerBnd + (phase(seg,i)), ...
+                                     upperBnd + (phase(seg,i))]); % can have a range of [0,2pi]
+        phaseWidth(seg,i) = rad2deg(ang_var2dev(abs(mean(exp(1i*sampleAngles)))));
 
         % update state and state cov
         P = P_new;
         x = x_new;
     end
-    % ending it on N-1
-%     [x_new,P_new] = oneStepKFupdate_sspp(x,y_thisRun(i),phi,M,Q,R,P);
-%     allX(:,i+1) = x_new;
-%     allP(:,:,i+1) = P_new;
-%     
-%     % estimate phase
-%     phase(seg, i) = angle(x_new(lowFreqLoc*2-1) + 1i* x_new(lowFreqLoc*2));
-%     samples = mvnrnd(x_new(lowFreqLoc*2-1:lowFreqLoc*2), P_new(lowFreqLoc*2-1:lowFreqLoc*2,lowFreqLoc*2-1:lowFreqLoc*2),2000);
-%     sampleAngles = angle(exp(1i*angle(samples(:,1) + 1i*samples(:,2)) - 1i*phase(seg,i)));
-%     tmpAngleStd = (wrapTo2Pi((prctile(sampleAngles,97.5) - prctile(sampleAngles,2.5)))/2);
-%     phaseBounds(seg,i,:) = sort([(phase(seg,i)- tmpAngleStd), (phase(seg,i) + tmpAngleStd)]);
-%     circstd(seg,i) = ang_var2dev(abs(mean(exp(1i*sampleAngles))));%exp(1i*sampleAngles)
-%     cosineSum(seg,i) = mean(cos(2*(sampleAngles)));
     
-
     allX_full(seg,:,:) = allX(lowFreqLoc*2-1:lowFreqLoc*2,:)';
     
-    % update below to take in the updated x start and cov start 
-%    [freqs, ampVec, sigmaFreqs, R, stateVec, stateCov,] = fit_MKModel_multSines(y_thisRun,omega, Fs, ampEst, allQ, R);
-%    tmp = find((freqs>lowFreqBand(1)) & (freqs<lowFreqBand(2)),1);
-%    
-%     if isempty(tmp)
-%         disp('Low freq band limits incorrect OR there is no low freq signal; retaining old parameters')       
-%     else
-%         lowFreqLoc = tmp;
-%         omega = freqs;
-%         ampEst = ampVec;
-%         allQ = sigmaFreqs;
-%     end
-%    
-%    [phi, Q, M] = genParametersSoulatMdl_sspp(omega, Fs, ampEst, allQ);
-%     toc
 end
     
 
