@@ -113,7 +113,7 @@ end
 
 R = (1/(length(y))) * (R);
 
-oldFreq = freqEst * 1000 /(2*pi);
+oldFreq = freqEst * Fs /(2*pi);
 
 freqEst = zeros(1,length(freqs));
 ampEst = zeros(1,length(freqs));
@@ -128,9 +128,9 @@ for numFreqs = 1: length(freqs)
     allQ(numFreqs) = 1/(2*length(y)) * (trace(C_tmp) - ampEst(numFreqs).^2 * trace(A_tmp));
 end
     
-[phi, Q] = genParametersSoulatMdl_sspp(freqEst * 1000 /(2*pi), Fs, ampEst, allQ); 
+[phi, Q] = genParametersSoulatMdl_sspp(freqEst * Fs /(2*pi), Fs, ampEst, allQ); 
 
-omega = freqEst * 1000 /(2*pi);
+omega = freqEst * Fs /(2*pi);
 stateVec = newAllX;
 stateCov = newAllP;
 
