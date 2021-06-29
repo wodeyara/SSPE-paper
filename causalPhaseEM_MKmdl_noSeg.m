@@ -1,5 +1,5 @@
-function [phase,phaseBounds,allX_full,phaseWidth,returnParams] = causalPhaseEM_MKmdl(y,initParams)
-% EXISTS FOR BACKWARD COMPATIBILITY -> USE causalPhaseEM_MKmdl_noSeg()
+function [phase,phaseBounds,allX_full,phaseWidth,returnParams] = causalPhaseEM_MKmdl_noSeg(y,initParams)
+% USE THIS BY DEFAULT AS THIS DOESNT SEGMENT THE DATA
 % causal phase estimates using the SP model and EM with fixed interval
 % smoothing across windows of data
 % primary benefit: assume a transitory burst of oscillatory activity in the
@@ -30,7 +30,9 @@ function [phase,phaseBounds,allX_full,phaseWidth,returnParams] = causalPhaseEM_M
 % allX_full - Estimated state for the first oscillator in freq band range
 % phaseWidth - Single value in degrees informing us of confidence in phase
 % returnParams - Estimated parameter values in same format at initParams
+
 % Last edit: Ani Wodeyar 6/29/2021
+
 freqs = initParams.freqs;
 Fs = initParams.Fs;
 ampVec = initParams.ampVec;
@@ -74,48 +76,40 @@ end
 % generating phase estimates for the whole period using past parameter ests
 % and the kalman filter
 [phi, Q, M] = genParametersSoulatMdl_sspp(omega, Fs, ampEst, allQ);
-phase = zeros(numSegments, windowSize);
-phaseBounds = zeros(numSegments, windowSize,2);
-allX_full = zeros(numSegments, windowSize, 2);
-phaseWidth = zeros(numSegments,windowSize);
+phase = zeros(length(y),1);
+phaseBounds = zeros(length(y),2);
+phaseWidth = zeros(length(y),1);
+allX = zeros(length(freqs)*2, length(y));
+allP = zeros(length(freqs)*2,length(freqs)*2, length(y));
 
-for seg = 2:numSegments
-%     tic
-    y_thisRun = y((seg-1)*windowSize + 1: seg*windowSize);
-    % running Kalman filter over one window before re-running EM
+x = stateVec(:,end);
+P = squeeze(stateCov(:,:,end));
+for tp = windowSize + 1 : length(y)
+%     tic    % running Kalman filter over one window before re-running EM
     % start below with the end of the EM run x and stae cov
-    allX = zeros(length(freqs)*2, windowSize);
-    allP = zeros(length(freqs)*2,length(freqs)*2, windowSize);
-    
-    x = stateVec(:,end);
-    P = squeeze(stateCov(:,:,end));
-    
-    for i = 1:(length(y_thisRun))
+
         % kalman update
-        [x_new,P_new] = oneStepKFupdate_sspp(x,y_thisRun(i),phi,M,Q,R,P);
-        allX(:,i) = x_new;
+        [x_new,P_new] = oneStepKFupdate_sspp(x,y(tp),phi,M,Q,R,P);
+        allX(:,tp) = x_new;
         P_new = (P_new + P_new') /2; % forcing symmetry to kill off rounding errors
-        allP(:,:,i) = P_new; 
+        allP(:,:,tp) = P_new; 
         
         % estimate phase
-        phase(seg, i) = angle(x_new(lowFreqLoc*2-1) + 1i* x_new(lowFreqLoc*2));
+        phase(tp) = angle(x_new(lowFreqLoc*2-1) + 1i* x_new(lowFreqLoc*2));
         samples = mvnrnd(x_new(lowFreqLoc*2-1:lowFreqLoc*2),...
             P_new(lowFreqLoc*2-1:lowFreqLoc*2,lowFreqLoc*2-1:lowFreqLoc*2),2000);
         
-        sampleAngles = (angle(exp(1i*angle(samples(:,1) + 1i*samples(:,2)) - 1i*phase(seg,i)))); % removing mean
+        sampleAngles = (angle(exp(1i*angle(samples(:,1) + 1i*samples(:,2)) - 1i*phase(tp)))); % removing mean
         lowerBnd = (prctile(sampleAngles,2.5));
         upperBnd = (prctile(sampleAngles,97.5));
-        phaseBounds(seg,i,:) = sort([lowerBnd + (phase(seg,i)), ...
-                                     upperBnd + (phase(seg,i))]); % can have a range of [0,2pi]
-        phaseWidth(seg,i) = rad2deg(ang_var2dev(abs(mean(exp(1i*sampleAngles)))));
+        phaseBounds(tp,:) = sort([lowerBnd + (phase(tp)), ...
+                                     upperBnd + (phase(tp))]); % can have a range of [0,2pi]
+        phaseWidth(tp) = rad2deg(ang_var2dev(abs(mean(exp(1i*sampleAngles)))));
 
         % update state and state cov
         P = P_new;
         x = x_new;
-    end
-    
-    allX_full(seg,:,:) = allX(lowFreqLoc*2-1:lowFreqLoc*2,:)';
-    
+     
 end
-    
+allX_full = allX(lowFreqLoc*2-1:lowFreqLoc*2,:)';   
 
