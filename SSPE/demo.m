@@ -27,10 +27,7 @@ initParams.sigmaObs = 1;
 initParams.window = 2000;
 initParams.lowFreqBand = [4,8];
 
-[phase,phaseBounds, fullX] = causalPhaseEM_MKmdl(data, initParams);
-phase = reshape(phase', size(phase,1) * size(phase,2),1);
-phaseBounds = reshape(permute(phaseBounds,[2,1,3]), size(phaseBounds,1) * size(phaseBounds,2),size(phaseBounds,3));
-fullX = reshape(permute(fullX,[2,1,3]), size(fullX,1) * size(fullX,2),size(fullX,3));
+[phase,phaseBounds, fullX] = causalPhaseEM_MKmdl_noSeg(data, initParams,0);
 
 figure
 err_Spcausal = angle(mean(exp(1i*(phase(2001:end) - truePhase(2001:end)))))*(180/pi);
