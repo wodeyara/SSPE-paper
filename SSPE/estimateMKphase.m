@@ -1,14 +1,13 @@
-function [phase,phaseBounds,phaseWidth] = estimateMKphase(data,freqs, Fs,ampVec, sigmaFreqs,sigmaObs,lowFreqLoc)
+function [phase,phaseBounds,phaseWidth,newAllX] = estimateMKphase(data,initParams,lowFreqLoc)
 
+freqs = initParams.freqs;
+Fs = initParams.Fs;
+ampVec = initParams.ampVec;
+sigmaFreqs = initParams.sigmaFreqs;
+sigmaObs = initParams.sigmaObs;
 
-if isempty(sigmaFreqs)
-    sigmaFreqs = 0.1*ones(length(freqs),1);
-end
-if isempty(sigmaObs)
-    sigmaObs = 10;
-end
 y = data;
-ang_var2dev = @(v)(sqrt(-2*log(1-v)));
+ang_var2dev = @(v)(sqrt(-2*log(v)));
 
 % need to initialize all my parameters
 
@@ -43,16 +42,17 @@ P_n = P_new;
 newAllX(:, length(y)) = allX(:,length(y));
 newAllP(:,:,length(y)) = allP(:,:,length(y));
 for i = length(y)-1:-1:1
+%     tic
     [x_backone,P_backone, J_one] =  fixedIntervalSmoother_sspp(x, x_n, P, P_n, phi, Q);
     x_n = x_backone;
-    P_n = P_backone;
+    P_n = triu(P_backone,1) + triu(P_backone,0)';
     x = allX(:,i);
     P = squeeze(allP(:,:,i));    
     
     % estimate phase
     phase(i+1) = angle(x_n(lowFreqLoc*2-1) + 1i* x_n(lowFreqLoc*2));
     samples = mvnrnd(x_n(lowFreqLoc*2-1:lowFreqLoc*2),...
-    P_n(lowFreqLoc*2-1:lowFreqLoc*2,lowFreqLoc*2-1:lowFreqLoc*2),2000);
+    P_n(lowFreqLoc*2-1:lowFreqLoc*2,lowFreqLoc*2-1:lowFreqLoc*2),5000);
     sampleAngles = (angle(exp(1i*angle(samples(:,1) + 1i*samples(:,2)) - 1i*phase(i+1)))); % removing mean
     lowerBnd = (prctile(sampleAngles,2.5));
     upperBnd = (prctile(sampleAngles,97.5));
@@ -64,6 +64,7 @@ for i = length(y)-1:-1:1
     newAllX(:,i+1) = x_backone;
     newAllP(:,:,i+1) = P_backone;
     allJ(:,:,i+1) = J_one;
+%     toc
 end
 [x_backone,P_backone, J_one] =  fixedIntervalSmoother_sspp(x, x_n, P, P_n, phi, Q);
 newAllX(:,1) = x_backone;

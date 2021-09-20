@@ -5,11 +5,11 @@
 
 Fs = 1000;
 time = 10; 
-Vlo = (10).*cos(2*pi*(6).*[1/Fs:1/Fs:time]); % random movement in amplitude, creates a little bump in PSD
+Vlo = (10).*cos(2*pi*(5).*[1/Fs:1/Fs:time]); % random movement in amplitude, creates a little bump in PSD
 
 [pn] = make_pink_noise(1,1e4,1/Fs);
 pn = 10*pn;
-data = Vlo;
+data = Vlo + pn;
 truePhase =  wrapToPi((2*pi*(6).*[1/Fs:1/Fs:time]))';
 
 %%

@@ -1,4 +1,4 @@
-function [phase,phaseBounds,allX_full,phaseWidth,returnParams] = causalPhaseEM_MKmdl_noSeg(y,initParams)
+function [phase,phaseBounds,allX_full,phaseWidth,returnParams] = causalPhaseEM_MKmdl_noSeg(y,initParams,flagNoFit)
 % USE THIS BY DEFAULT AS THIS DOESNT SEGMENT THE DATA
 % causal phase estimates using the SP model and EM with fixed interval
 % smoothing across windows of data
@@ -55,20 +55,27 @@ numSegments = floor(length(y)/windowSize);
 ang_var2dev = @(v) sqrt(-2*log(v)); % note the difference in definition (ie not (1-v))
 
 data = y(1:windowSize);
+if ~flagNoFit
 % first run to set up parameters
-[omega, ampEst, allQ, R, stateVec, stateCov] = fit_MKModel_multSines(data,freqs, Fs,ampVec, sigmaFreqs,sigmaObs);
-lowFreqLoc = find((omega>lowFreqBand(1)) & (omega<lowFreqBand(2)),1);
-returnParams.freqs = omega;
-returnParams.ampVec = ampEst;
-returnParams.sigmaFreqs = allQ;
-returnParams.sigmaObs = R;
-
+    [omega, ampEst, allQ, R, stateVec, stateCov] = fit_MKModel_multSines(data,freqs, Fs,ampVec, sigmaFreqs,sigmaObs);
+    lowFreqLoc = find((omega>lowFreqBand(1)) & (omega<lowFreqBand(2)),1);
+    returnParams.freqs = omega;
+    returnParams.ampVec = ampEst;
+    returnParams.sigmaFreqs = allQ;
+    returnParams.sigmaObs = R;
+else
+    returnParams = [];
+    lowFreqLoc = [];
+    stateVec = zeros(length(freqs)*2,1);
+    stateCov(:,:,1) = eye(length(freqs)*2,length(freqs)*2)*0.001;
+end
  
 if isempty(lowFreqLoc)
     disp('Low freq band limits incorrect OR there is no low freq signal; retaining initial params')
     omega = freqs;
     ampEst = ampVec;
     allQ = sigmaFreqs;
+    R = sigmaObs;
     [~,lowFreqLoc] = min(abs(freqs-mean(lowFreqBand))); % pick frequency closest to middle of low frequency range
 end
 
