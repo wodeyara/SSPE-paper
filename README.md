@@ -1,5 +1,5 @@
 # SSPE-sims
-Code repository to recreate the simulations and plots of "A State Space Modeling Approach to Real-Time Phase Estimation" paper. 
+Code repository to recreate the simulations and plots in [A State Space Modeling Approach to Real-Time Phase Estimation](https://elifesciences.org/articles/68803). 
  
 Note that data from the simulations exists already at Figshare, however, they can also be recreated by running the simulations 
 in the SSPE-sims/simulations folder. 
