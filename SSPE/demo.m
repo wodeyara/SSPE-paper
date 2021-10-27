@@ -16,12 +16,12 @@ truePhase =  wrapToPi((2*pi*(6).*[1/Fs:1/Fs:time]))';
 
 % setting up initial parameters to start the causalPhaseEM code
 initParams.freqs = 4; % only tracking a single oscillator
-initParams.Fs = 1000;
-initParams.ampVec = .99; % in a pinch this can be initialized to 0.99 to start
-initParams.sigmaFreqs = 10; % its important to use a value of this that is in the same ballpark scale
-initParams.sigmaObs = 1;
+initParams.Fs = 1000; % sampling frequency for data
+initParams.ampVec = .99; % in a pinch this can be initialized to 0.99 to start - represents rate of damping
+initParams.sigmaFreqs = 10; % its important to use a value of this that is in the same ballpark scale, estimate of covariance
+initParams.sigmaObs = 1; % observation variance for measurement noise
 initParams.window = 2000; % the analysis uses 2000 samples from start of data to fit params
-initParams.lowFreqBand = [4,8];
+initParams.lowFreqBand = [4,8]; % band that we expect oscillator of interest to be in
 
 [phase,phaseBounds, fullX,returnParams] = causalPhaseEM_MKmdl_noSeg(data, initParams,0);
 disp('Estimates of the parameters are below:')
