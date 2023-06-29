@@ -52,7 +52,7 @@ for i = length(y)-1:-1:1
     % estimate phase
     phase(i+1) = angle(x_n(lowFreqLoc*2-1) + 1i* x_n(lowFreqLoc*2));
     samples = mvnrnd(x_n(lowFreqLoc*2-1:lowFreqLoc*2),...
-    P_n(lowFreqLoc*2-1:lowFreqLoc*2,lowFreqLoc*2-1:lowFreqLoc*2),5000);
+    P_n(lowFreqLoc*2-1:lowFreqLoc*2,lowFreqLoc*2-1:lowFreqLoc*2),2000);
     sampleAngles = (angle(exp(1i*angle(samples(:,1) + 1i*samples(:,2)) - 1i*phase(i+1)))); % removing mean
     lowerBnd = (prctile(sampleAngles,2.5));
     upperBnd = (prctile(sampleAngles,97.5));

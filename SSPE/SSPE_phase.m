@@ -59,33 +59,52 @@ newAllP(:,:,1) = P_backone;
 allJ(:,:,1) = J_one;
 
 phase = zeros(length(y),length(freqs));
+phaseBounds = zeros(length(y),2);
 % pre-sample the multivariate gaussian
 allRandVals = randn(length(freqs)*2, 2000);
-parfor i = 1:length(y)
-    x_n = newAllX(:,i);
-    P_n = newAllP(:,:,i);
-    
-    P_n_decomp = chol(P_n);
-    
-    phase(i,:) = angle(x_n(1:2:end) + 1i*x_n(2:2:end));
-    samples = x_n + P_n_decomp * allRandVals; % samps = mu + Cov_decomp*(unit normal samps);
-%     samples = mvnrnd(x_n,P_n,2000); 
-    tmpPhase = angle(x_n(lowFreqLoc*2-1) + 1i*x_n(lowFreqLoc*2));
-    sampleAngles = (angle(exp(1i*angle(samples(lowFreqLoc*2-1,:) + ...
-                            1i*samples(lowFreqLoc*2,:)) - 1i*tmpPhase))); % removing mean
-    
-%     lowerBnd = (prctile(sampleAngles,2.5));
-    sampMean = mean(sampleAngles);
-    sampSTD = 2*std(sampleAngles);
-    lowerBnd = sampMean - sampSTD;
-    upperBnd = sampMean + sampSTD;
-    
-    phaseBounds(i,:) = sort([lowerBnd + (tmpPhase), ...
-                                 upperBnd + (tmpPhase)]); % can have a range of [0,2pi]
 
+% Process each block
+blockSize = 1e5; % size of each block
+numBlocks = ceil(length(y) / blockSize);
+for k = 1:numBlocks
+    % Determine the range of indices for this block
+    blockStart = (k - 1) * blockSize + 1;
+    blockEnd = min(k * blockSize, length(y));
+    blockIndices = blockStart:blockEnd;
+
+    % Preallocate arrays for this block
+    phaseBlock = zeros(length(blockIndices), length(freqs));
+    phaseBoundsBlock = zeros(length(blockIndices), 2);
     
+    newAllX_block = newAllX(:,blockIndices);
+    newAllP_block = newAllP(:,:,blockIndices);
+    
+    parfor i = 1:length(blockIndices)
+        x_n = newAllX_block(:,i);
+        P_n = newAllP_block(:,:,i);
+    
+        P_n_decomp = chol(P_n);
+
+        phaseBlock(i,:) = atan2(x_n(2:2:end), x_n(1:2:end));
+        samples = x_n + (P_n_decomp * allRandVals); % samps = mu + Cov_decomp*(unit normal samps);
+        
+        tmpPhase = atan2(x_n(lowFreqLoc*2), x_n(lowFreqLoc*2)-1);
+        sampleAngles = (angle(exp(1i*atan2(samples(lowFreqLoc*2,:),...
+                            samples(lowFreqLoc*2-1,:)) - 1i*tmpPhase))); % removing mean
+%         sampleAngles = atan2(samples(lowFreqLoc*2,:), samples(lowFreqLoc*2-1,:)); % 
+    
+        sampMean = mean(sampleAngles);
+        sampSTD = 2*std(sampleAngles);
+        lowerBnd = sampMean - sampSTD;
+        upperBnd = sampMean + sampSTD;
+
+        phaseBoundsBlock(i,:) = sort([lowerBnd+tmpPhase, upperBnd+tmpPhase]); % can have a range of [0,2pi]
+    end
+    
+    % Store results for this block
+    phase(blockIndices,:) = phaseBlock;
+    phaseBounds(blockIndices,:) = phaseBoundsBlock;
 end
-
 
 % need to estimate P_t_(t-1) for t = 1:N
 P_tmp = phi * squeeze(allP(:,:,end-1)) * phi' +Q;
